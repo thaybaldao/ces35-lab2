@@ -6,12 +6,12 @@ HTTPResp::HTTPResp(string s){
 	int startPos = 0, lastPos;
 	lastPos = s.find(' ');
 	this->version = s.substr(startPos, lastPos - startPos);
-    cout << "version: " << this->version << endl;
+    //cout << "version: " << this->version << endl;
 
 	startPos = lastPos + 1;
 	lastPos = s.find('\r', startPos);
     this->status = s.substr(startPos, lastPos - startPos);
-    cout << "status: " << this->status << endl;
+    //cout << "status: " << this->status << endl;
 
     startPos = lastPos + 2;
     lastPos = s.find('\r', startPos);
@@ -25,14 +25,27 @@ HTTPResp::HTTPResp(string s){
     	lastPos = s.find('\r', startPos);
     }
 
-    cout << "hearders: " << endl;
-    for(string s : this->headers){
-        cout << s << endl;  
-    }
+    //cout << "hearders: " << endl;
+    // for(string s : this->headers){
+    //     cout << s << endl;  
+    // }
 
     //int size =  s.size();
 
     this->content = s.substr(startPos, s.size() - startPos);
-    cout << "content: " << this->content << endl;
+    //cout << "content: " << this->content << endl;
     
+}
+
+string HTTPResp::encode(){
+    string req;
+
+    req = this->version + " " + this->status + "\r\n";
+    for(string h : this->headers){
+        req += h + "\r\n";
+    }
+
+    req += "\r\n" + this->content;
+
+    return req;
 }
