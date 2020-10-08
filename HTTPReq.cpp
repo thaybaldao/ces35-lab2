@@ -1,5 +1,7 @@
 #include "HTTPReq.h"
 
+HTTPReq::HTTPReq(){}
+
 HTTPReq::HTTPReq(string s){
 	int startPos = 0, lastPos;
 	lastPos = s.find(' ');

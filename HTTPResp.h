@@ -4,13 +4,13 @@
 
 using namespace std;
 
-class HTTPReq{
+class HTTPResp{
 public:
-	string method;
-	string URL;
 	string version;
+	string status;
 	vector<string> headers;
-	HTTPReq();
-	HTTPReq(string s);
+	string content;
+	HTTPResp();
+	HTTPResp(string s);
 	string encode();
 };
