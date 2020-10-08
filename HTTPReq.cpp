@@ -3,27 +3,30 @@
 HTTPReq::HTTPReq(){}
 
 HTTPReq::HTTPReq(string s){
-	int startPos = 0, lastPos;
-	lastPos = s.find(' ');
-	this->method = s.substr(startPos, lastPos - startPos);
+	if(s.size() > 0){
+		int startPos = 0, lastPos;
+		lastPos = s.find(' ');
+		this->method = s.substr(startPos, lastPos - startPos);
 
-	startPos = lastPos + 1;
-	lastPos = s.find(' ', startPos);
-	this->URL = s.substr(startPos, lastPos - startPos);
+		startPos = lastPos + 1;
+		lastPos = s.find(' ', startPos);
+		this->URL = s.substr(startPos, lastPos - startPos);
 
-	startPos = lastPos + 1;
-	lastPos = s.find('\r', startPos);
-    this->version = s.substr(startPos, lastPos - startPos);
+		startPos = lastPos + 1;
+		lastPos = s.find('\r', startPos);
+	    this->version = s.substr(startPos, lastPos - startPos);
 
-    startPos = lastPos + 2;
-    lastPos = s.find('\r', startPos);
-    while(lastPos != string::npos){
-    	this->headers.push_back(s.substr(startPos, lastPos - startPos));
-    	startPos = lastPos + 2;
-    	lastPos = s.find('\r', startPos);
-    }
+	    startPos = lastPos + 2;
+	    lastPos = s.find('\r', startPos);
+	    while(lastPos != string::npos){
+	    	this->headers.push_back(s.substr(startPos, lastPos - startPos));
+	    	startPos = lastPos + 2;
+	    	lastPos = s.find('\r', startPos);
+	    }
 
-    this->headers.pop_back();
+	    this->headers.pop_back();
+	}
+	
 }
 
 

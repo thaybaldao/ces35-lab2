@@ -11,6 +11,7 @@ public:
 	vector<string> headers;
 	string content;
 	HTTPResp();
-	HTTPResp(string s);
+	HTTPResp(string status);
+	//HTTPResp(string s);
 	string encode();
 };

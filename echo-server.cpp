@@ -83,6 +83,8 @@ int main() {
       return 5;
     }
 
+    std::cout << "reqStr: " << buf << std::endl;
+
     // Imprime o valor recebido no servidor antes de reenviar
     // para o cliente de volta
     ss << buf << std::endl;

@@ -55,7 +55,7 @@ int main() {
   // input eh para a leitura do teclado
   // ss eh para receber o valor de volta
   bool isEnd = false;
-  char buf[20] = {0};
+  char buf[1024] = {0};
   std::string input;
   std::stringstream ss;
 
@@ -75,7 +75,7 @@ int main() {
     }
 
     // recebe no buffer uma certa quantidade de bytes ate 20 
-    if (recv(sockfd, buf, 20, 0) == -1) {
+    if (recv(sockfd, buf, 1024, 0) == -1) {
       perror("recv");
       return 5;
     }

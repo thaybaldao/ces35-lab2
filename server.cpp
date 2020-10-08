@@ -1,7 +1,3 @@
-// b) por meio do socket "listen" aceitar solicitações de conexão dos clientes, e estabelecer conexões com os clientes. 
-
-// c) Fazer uso de programação de redes que lide com conexões simultâneas (por exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web deve poder receber solicitações de vários clientes ao mesmo
-// tempo
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -15,6 +11,10 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
+
+#include "HTTPResp.h"
+#include "HTTPReq.h"
 
 using namespace std;
 
@@ -50,25 +50,174 @@ string getIP(string host){
 
 int main(int argc, char** argv) {
 	string host = "localhost";
-	string port = "3000";
+	string portStr = "3000";
 	string dir = "/tmp";
 
 	if(argc == 4){
 		host = argv[1];
-		port = argv[2];
+		portStr = argv[2];
 		dir = argv[3];
 	} else if(argc == 3){
 		host = argv[1];
-		port = argv[2];
+		portStr = argv[2];
 	} else if(argc == 2){
 		host = argv[1];
 	}
 
-	cout << "ip address: " << getIP(host) << endl;
+	stringstream ss;
+	ss << portStr;
+	int port;
+	ss >> port;
 
-	// a) converter o nome do host do servidor em endereço IP, 
-	// abrir socket para escuta neste endereço IP e no número 
-	// de porta especificado. 
+	string ip = getIP(host);
+
+	// cout << "ip address: " << getIP(host) << endl;
+
+	/* a) converter o nome do host do servidor em endereço IP, 
+	 abrir socket para escuta neste endereço IP e no número 
+	 de porta especificado. */
+	
+	// cria um socket para IPv4 e usando protocolo de transporte TCP
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+	// Opções de configuração do SOCKETs
+	// No sistema Unix um socket local TCP fica preso e indisponível 
+	// por algum tempo após close, a não ser que configurado SO_REUSEADDR
+	int yes = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+		perror("setsockopt");
+		return 1;
+	}
+
+	// struct sockaddr_in {
+	//  short            sin_family;   // e.g. AF_INET, AF_INET6
+	//  unsigned short   sin_port;     // e.g. htons(3490)
+	//  struct in_addr   sin_addr;     // see struct in_addr, below
+	//  char             sin_zero[8];  // zero this if you want to
+	// };
+
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);     // porta tem 16 bits, logo short, network byte order
+	addr.sin_addr.s_addr = inet_addr(ip.c_str());
+	memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
+
+	// realizar o bind (registrar a porta para uso com o SO) para o socket
+	if (bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		perror("bind");
+		return 2;
+	}
+
+	/* b) por meio do socket "listen" aceitar solicitações de conexão dos clientes, 
+	e estabelecer conexões com os clientes. */
+	// colocar o socket em modo de escuta, ouvindo a porta 
+	if (listen(sockfd, 1) == -1) {
+		perror("listen");
+		return 3;
+	}
+
+	// aceitar a conexao TCP
+	// verificar que sockfd e clientSockfd sao sockets diferentes
+	// sockfd eh a "socket de boas vindas"
+	// clientSockfd eh a "socket diretamente com o cliente"
+	struct sockaddr_in clientAddr;
+	socklen_t clientAddrSize = sizeof(clientAddr);
+	int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
+
+	if (clientSockfd == -1) {
+		perror("accept");
+		return 4;
+	}
+
+	/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
+	exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
+	deve poder receber solicitações de vários clientes ao mesmo tempo */
+
+	// usa um vetor de caracteres para preencher o endereço IP do cliente
+	char ipstr[INET_ADDRSTRLEN] = {'\0'};
+	inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+	cout << "Accept a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << std::endl;
+
+	// faz leitura e escrita dos dados da conexao 
+	// utiliza um buffer de 20 bytes (char)
+	char bufIn[1024] = {0};
+	char bufOut[1024] = {0};
+
+	string status200 = "200 OK";
+	string status400 = "400 Bad Request";
+	string status404 = "404 Not Found";
+
+	while (true) {
+		// zera a memoria do buffer
+		memset(bufIn, '\0', sizeof(bufIn));
+		memset(bufOut, '\0', sizeof(bufOut));
+
+		// recebe ate 1024 bytes do cliente remoto
+		if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
+		  	perror("recv");
+		  	cout << "hey253";
+		  	return 5;
+		  	// send 400 bad request
+		}
+
+		// Imprime o valor recebido no servidor antes de reenviar
+		// para o cliente de volta
+		string reqStr = bufIn;
+		HTTPReq req = HTTPReq(reqStr);
+		cout << "reqStr: " << reqStr << endl;
+		cout << "req.method: " << req.method << endl;
+		cout << "req.URL: " << req.URL << endl;
+
+		string nameFile = dir;
+		if(req.URL == "/"){
+			nameFile += "/index.html";
+		} else{
+			nameFile += req.URL;
+		}
+
+		HTTPResp resp;
+
+		ifstream myFile(nameFile);
+    	if(!myFile.is_open()){
+    		resp = HTTPResp(status404);
+    		resp.headers.push_back("Accept-Ranges: bytes");
+    		resp.headers.push_back("Content-Length: 50");
+    		resp.headers.push_back("Content-Type: text/html");
+    		//resp.headers.push_back("Connection: keep-alive");
+    		resp.content = "<h1>Hello!</h1>";
+    	}
+
+    	string respStr = resp.encode();
+ 		
+ 		for(int i = 0; i < respStr.size(); ++i){
+ 			bufOut[i] = respStr[i];
+ 		}
+
+ 		bufOut[respStr.size()] = '\0';
+
+ 		cout << bufOut << endl;
+		
+		// envia de volta o buffer recebido como um echo
+		if (send(clientSockfd, bufOut, 1024, 0) == -1) {
+			perror("send");
+		  	return 6;
+		}
+
+		// break;
+
+		// o conteudo do buffer convertido para string pode 
+		// ser comparado com palavras-chave
+		if (reqStr == "close\n"){
+			cout << "hey";
+			break;
+		}
+
+		// zera a string para receber a proxima
+		reqStr = "";
+	}
+
+	// fecha o socket
+	close(clientSockfd);
 
 
 	return 0;
