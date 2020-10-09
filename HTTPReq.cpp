@@ -2,31 +2,61 @@
 
 HTTPReq::HTTPReq(){}
 
-HTTPReq::HTTPReq(string s){
-	if(s.size() > 0){
-		int startPos = 0, lastPos;
-		lastPos = s.find(' ');
-		this->method = s.substr(startPos, lastPos - startPos);
-
-		startPos = lastPos + 1;
-		lastPos = s.find(' ', startPos);
-		this->URL = s.substr(startPos, lastPos - startPos);
-
-		startPos = lastPos + 1;
-		lastPos = s.find('\r', startPos);
-	    this->version = s.substr(startPos, lastPos - startPos);
-
-	    startPos = lastPos + 2;
-	    lastPos = s.find('\r', startPos);
-	    while(lastPos != string::npos){
-	    	this->headers.push_back(s.substr(startPos, lastPos - startPos));
-	    	startPos = lastPos + 2;
-	    	lastPos = s.find('\r', startPos);
-	    }
-
-	    this->headers.pop_back();
+bool HTTPReq::decode(string s){
+	if(s.size() == 0 or s.back() != '\n'){
+		return false;
 	}
-	
+
+	int startPos = 0, lastPos;
+	lastPos = s.find(' ');
+	if(lastPos == string::npos){
+		return false;
+	}
+	this->method = s.substr(startPos, lastPos - startPos);
+	if(this->method.size() == 0){
+		return false;
+	}
+
+	startPos = lastPos + 1;
+	lastPos = s.find(' ', startPos);
+	if(lastPos == string::npos){
+		return false;
+	}
+	this->URL = s.substr(startPos, lastPos - startPos);
+	if(this->URL.size() == 0){
+		return false;
+	}
+
+	startPos = lastPos + 1;
+	lastPos = s.find('\r', startPos);
+	if(lastPos == string::npos){
+		return false;
+	}
+    this->version = s.substr(startPos, lastPos - startPos);
+    if(this->version.size() == 0){
+		return false;
+	}
+    					        
+    startPos = lastPos + 2;
+    lastPos = s.find('\r', startPos);
+    if(lastPos == string::npos){
+		return false;
+	}
+
+    while(lastPos != string::npos){
+    	if(lastPos - startPos > 0){
+    		this->headers.push_back(s.substr(startPos, lastPos - startPos));
+    	} else if(lastPos + 2 != s.size()){
+    		return false;
+    	} else {
+    		return true;
+    	}
+
+    	startPos = lastPos + 2;
+    	lastPos = s.find('\r', startPos);
+    }
+
+    return false;
 }
 
 

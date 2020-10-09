@@ -11,6 +11,6 @@ public:
 	string version;
 	vector<string> headers;
 	HTTPReq();
-	HTTPReq(string s);
+	bool decode(string s);
 	string encode();
 };

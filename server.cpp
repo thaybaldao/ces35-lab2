@@ -120,91 +120,93 @@ int main(int argc, char** argv) {
 	// verificar que sockfd e clientSockfd sao sockets diferentes
 	// sockfd eh a "socket de boas vindas"
 	// clientSockfd eh a "socket diretamente com o cliente"
-	struct sockaddr_in clientAddr;
-	socklen_t clientAddrSize = sizeof(clientAddr);
-	int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
+	while(true){
+		struct sockaddr_in clientAddr;
+		socklen_t clientAddrSize = sizeof(clientAddr);
+		int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
 
-	if (clientSockfd == -1) {
-		perror("accept");
-		return 4;
-	}
+		if (clientSockfd == -1) {
+			perror("accept");
+			return 4;
+		}
 
-	/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
-	exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
-	deve poder receber solicitações de vários clientes ao mesmo tempo */
+		/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
+		exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
+		deve poder receber solicitações de vários clientes ao mesmo tempo */
 
-	// usa um vetor de caracteres para preencher o endereço IP do cliente
-	char ipstr[INET_ADDRSTRLEN] = {'\0'};
-	inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
-	cout << "Accept a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << std::endl;
+		// usa um vetor de caracteres para preencher o endereço IP do cliente
+		char ipstr[INET_ADDRSTRLEN] = {'\0'};
+		inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+		cout << "Accept a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
-	// faz leitura e escrita dos dados da conexao 
-	// utiliza um buffer de 20 bytes (char)
-	char bufIn[1024] = {0};
-	char bufOut[1024] = {0};
+		// faz leitura e escrita dos dados da conexao 
+		// utiliza um buffer de 20 bytes (char)
+		char bufIn[1024] = {0};
+		char bufOut[1024] = {0};
 
-	string status200 = "200 OK";
-	string status400 = "400 Bad Request";
-	string status404 = "404 Not Found";
+		string status200 = "200 OK";
+		string status400 = "400 Bad Request";
+		string status404 = "404 Not Found";
 
-	// zera a memoria do buffer
-	memset(bufIn, '\0', sizeof(bufIn));
-	memset(bufOut, '\0', sizeof(bufOut));
+		// zera a memoria do buffer
+		memset(bufIn, '\0', sizeof(bufIn));
+		memset(bufOut, '\0', sizeof(bufOut));
 
-	// recebe ate 1024 bytes do cliente remoto
-	if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
-	  	perror("recv");
-	  	cout << "hey253";
-	  	return 5;
-	  	// send 400 bad request
-	}
+		// recebe ate 1024 bytes do cliente remoto
+		if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
+		  	perror("recv");
+		  	cout << "hey253";
+		  	return 5;
+		  	// send 400 bad request
+		}
 
-	// Imprime o valor recebido no servidor antes de reenviar
-	// para o cliente de volta
-	string reqStr = bufIn;
-	HTTPReq req = HTTPReq(reqStr);
+		// Imprime o valor recebido no servidor antes de reenviar
+		// para o cliente de volta
+		string reqStr = bufIn;
+		HTTPReq req = HTTPReq(reqStr);
 
-	string nameFile = dir;
-	if(req.URL == "/"){
-		nameFile += "/index.html";
-	} else{
-		nameFile += req.URL;
-	}
+		string nameFile = dir;
+		if(req.URL == "/"){
+			nameFile += "/index.html";
+		} else{
+			nameFile += req.URL;
+		}
 
-	HTTPResp resp;
+		HTTPResp resp;
 
-	ifstream myFile(nameFile);
-	if(!myFile.is_open()){
-		resp = HTTPResp(status404);
-		resp.content = "<h1>" + status404 + "</h1>";
-		resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
-	} else {
-		resp = HTTPResp(status200);
-		string content;
-		string line;
+		ifstream myFile(nameFile);
+		if(!myFile.is_open()){
+			resp = HTTPResp(status404);
+			resp.content = "<h1>" + status404 + "</h1>";
+			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+		} else {
+			resp = HTTPResp(status200);
+			string content;
+			string line;
+			
+			while(getline(myFile, line))
+		    {
+		      content += line + "\n";
+		    }
+		    myFile.close();
+		    
+		    resp.content = content;
+
+		    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+		}
+
+		strcpy(bufOut, resp.encode().c_str());
 		
-		while(getline(myFile, line))
-	    {
-	      content += line + "\n";
-	    }
-	    myFile.close();
-	    
-	    resp.content = content;
+		// envia de volta o buffer recebido como um echo
+		if (send(clientSockfd, bufOut, 1024, 0) == -1) {
+			perror("send");
+		  	return 6;
+		}
 
-	    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+		// fecha o socket
+		close(clientSockfd);
+		cout << "Closing connection with: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 	}
-
-	strcpy(bufOut, resp.encode().c_str());
-	
-	// envia de volta o buffer recebido como um echo
-	if (send(clientSockfd, bufOut, 1024, 0) == -1) {
-		perror("send");
-	  	return 6;
-	}
-
-	// fecha o socket
-	close(clientSockfd);
-
 
 	return 0;
 }
