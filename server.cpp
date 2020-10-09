@@ -147,73 +147,59 @@ int main(int argc, char** argv) {
 	string status400 = "400 Bad Request";
 	string status404 = "404 Not Found";
 
-	while (true) {
-		// zera a memoria do buffer
-		memset(bufIn, '\0', sizeof(bufIn));
-		memset(bufOut, '\0', sizeof(bufOut));
+	// zera a memoria do buffer
+	memset(bufIn, '\0', sizeof(bufIn));
+	memset(bufOut, '\0', sizeof(bufOut));
 
-		// recebe ate 1024 bytes do cliente remoto
-		if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
-		  	perror("recv");
-		  	cout << "hey253";
-		  	return 5;
-		  	// send 400 bad request
-		}
+	// recebe ate 1024 bytes do cliente remoto
+	if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
+	  	perror("recv");
+	  	cout << "hey253";
+	  	return 5;
+	  	// send 400 bad request
+	}
 
-		// Imprime o valor recebido no servidor antes de reenviar
-		// para o cliente de volta
-		string reqStr = bufIn;
-		HTTPReq req = HTTPReq(reqStr);
-		cout << "reqStr: " << reqStr << endl;
-		cout << "req.method: " << req.method << endl;
-		cout << "req.URL: " << req.URL << endl;
+	// Imprime o valor recebido no servidor antes de reenviar
+	// para o cliente de volta
+	string reqStr = bufIn;
+	HTTPReq req = HTTPReq(reqStr);
 
-		string nameFile = dir;
-		if(req.URL == "/"){
-			nameFile += "/index.html";
-		} else{
-			nameFile += req.URL;
-		}
+	string nameFile = dir;
+	if(req.URL == "/"){
+		nameFile += "/index.html";
+	} else{
+		nameFile += req.URL;
+	}
 
-		HTTPResp resp;
+	HTTPResp resp;
 
-		ifstream myFile(nameFile);
-    	if(!myFile.is_open()){
-    		resp = HTTPResp(status404);
-    		resp.headers.push_back("Accept-Ranges: bytes");
-    		resp.headers.push_back("Content-Length: 50");
-    		resp.headers.push_back("Content-Type: text/html");
-    		//resp.headers.push_back("Connection: keep-alive");
-    		resp.content = "<h1>Hello!</h1>";
-    	}
-
-    	string respStr = resp.encode();
- 		
- 		for(int i = 0; i < respStr.size(); ++i){
- 			bufOut[i] = respStr[i];
- 		}
-
- 		bufOut[respStr.size()] = '\0';
-
- 		cout << bufOut << endl;
+	ifstream myFile(nameFile);
+	if(!myFile.is_open()){
+		resp = HTTPResp(status404);
+		resp.content = "<h1>" + status404 + "</h1>";
+		resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+	} else {
+		resp = HTTPResp(status200);
+		string content;
+		string line;
 		
-		// envia de volta o buffer recebido como um echo
-		if (send(clientSockfd, bufOut, 1024, 0) == -1) {
-			perror("send");
-		  	return 6;
-		}
+		while(getline(myFile, line))
+	    {
+	      content += line + "\n";
+	    }
+	    myFile.close();
+	    
+	    resp.content = content;
 
-		// break;
+	    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+	}
 
-		// o conteudo do buffer convertido para string pode 
-		// ser comparado com palavras-chave
-		if (reqStr == "close\n"){
-			cout << "hey";
-			break;
-		}
-
-		// zera a string para receber a proxima
-		reqStr = "";
+	strcpy(bufOut, resp.encode().c_str());
+	
+	// envia de volta o buffer recebido como um echo
+	if (send(clientSockfd, bufOut, 1024, 0) == -1) {
+		perror("send");
+	  	return 6;
 	}
 
 	// fecha o socket
