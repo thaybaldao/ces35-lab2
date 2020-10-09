@@ -71,8 +71,6 @@ int main(int argc, char** argv) {
 
 	string ip = getIP(host);
 
-	// cout << "ip address: " << getIP(host) << endl;
-
 	/* a) converter o nome do host do servidor em endereço IP, 
 	 abrir socket para escuta neste endereço IP e no número 
 	 de porta especificado. */
@@ -155,7 +153,6 @@ int main(int argc, char** argv) {
 		// recebe ate 1024 bytes do cliente remoto
 		if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
 		  	perror("recv");
-		  	cout << "hey253";
 		  	return 5;
 		  	// send 400 bad request
 		}
@@ -163,36 +160,40 @@ int main(int argc, char** argv) {
 		// Imprime o valor recebido no servidor antes de reenviar
 		// para o cliente de volta
 		string reqStr = bufIn;
-		HTTPReq req = HTTPReq(reqStr);
-
-		string nameFile = dir;
-		if(req.URL == "/"){
-			nameFile += "/index.html";
-		} else{
-			nameFile += req.URL;
-		}
-
+		HTTPReq req = HTTPReq();
 		HTTPResp resp;
 
-		ifstream myFile(nameFile);
-		if(!myFile.is_open()){
-			resp = HTTPResp(status404);
-			resp.content = "<h1>" + status404 + "</h1>";
-			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
-		} else {
-			resp = HTTPResp(status200);
-			string content;
-			string line;
-			
-			while(getline(myFile, line))
-		    {
-		      content += line + "\n";
-		    }
-		    myFile.close();
-		    
-		    resp.content = content;
+		if(req.decode(reqStr)){
+			string nameFile = dir;
+			if(req.URL == "/"){
+				nameFile += "/index.html";
+			} else{
+				nameFile += req.URL;
+			}
 
-		    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+			ifstream myFile(nameFile);
+			if(!myFile.is_open()){
+				resp = HTTPResp(status404);
+				resp.content = "<h1>" + status404 + "</h1>";
+				resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+			} else {
+				resp = HTTPResp(status200);
+				string content;
+				string line;
+				
+				while(getline(myFile, line)) {
+			      content += line + "\n";
+			    }
+			    myFile.close();
+			    
+			    resp.content = content;
+
+			    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+			}
+		} else {
+			resp = HTTPResp(status400);
+			resp.content = "<h1>" + status400 + "</h1>";
+			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 		}
 
 		strcpy(bufOut, resp.encode().c_str());

@@ -7,7 +7,7 @@ using namespace std;
 int main(){
 	//string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\nContent-Length: 50\r\n\r\nandasçdmasmd";
 	// string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\nContent-Length: 50\r\n\r\n\r\n";
-	// string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\nContent-Length: 50\r\n\r\n";
+	string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\nContent-Length: 50\r\n\r\n";
 	// string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\n\r\t";
 	// string s = "GET /index.html HTTP/1.0\r\nHost: www.google.com\r\n\r\n";
 	// string s = "GET /index.html HTTP/1.0\r\n\r\n";
