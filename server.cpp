@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
 		memset(bufOut, '\0', sizeof(bufOut));
 
 		// recebe ate 1024 bytes do cliente remoto
-		if (recv(clientSockfd, bufIn, 1024, 0) == -1) {
+		if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
 		  	perror("recv");
 		  	return 5;
 		  	// send 400 bad request
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
 		strcpy(bufOut, resp.encode().c_str());
 		
 		// envia de volta o buffer recebido como um echo
-		if (send(clientSockfd, bufOut, 1024, 0) == -1) {
+		if (send(clientSockfd, bufOut, sizeof(bufOut), 0) == -1) {
 			perror("send");
 		  	return 6;
 		}
