@@ -124,9 +124,6 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 
 		copy(bufOutVec.begin() + s, bufOutVec.begin() + e, bufOut);
 
-		cout << endl << counter << ": Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
-
-
 		nBytesSent = send(clientSockfd, bufOut, sizeof(bufOut), 0);
 		if(nBytesSent == -1){
 			perror("send");
@@ -136,6 +133,8 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 		counter -= nBytesSent;
 		s = e;
 	}
+
+	cout << endl << "Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
 	// fecha o socket
 	close(clientSockfd);
