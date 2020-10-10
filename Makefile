@@ -2,7 +2,7 @@ CXX=g++
 CXXOPTIMIZE= -O2
 CXXFLAGS= -g -Wall -pthread -std=c++11 $(CXXOPTIMIZE)
 USERID=bruno-raissa-thayna
-#CLASSES=SUA_LIB_COMUM
+
 all: server client
 server: 
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp HTTPResp.cpp HTTPReq.cpp 

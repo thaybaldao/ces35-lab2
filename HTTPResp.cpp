@@ -1,14 +1,24 @@
 #include "HTTPResp.h"
 
+/*
+		Construtor da classe sem argumentos para que seja aplicado
+		metodo de decodificação do lado do cliente.
+*/
 HTTPResp::HTTPResp(){}
 
+/*
+   Construtor da classe com argumentos. E utilizado para construir
+   a mensagem com conteudo que sera retornado ao cliente. Se utiliza
+   essa funcao na resposta do servidor.
+*/
 HTTPResp::HTTPResp(string status){
-    this->version = "HTTP/1.0";
-    this->status = status;
-    this->headers = {};
+    this->version = "HTTP/1.0"; // fixar HTTP/1.0
+    this->status = status; // inserir o status recebido como argumento
+    this->headers = {}; // iniciar vetor de headers
+    // inicializar content padrao para retorno
     string content = "<!DOCTYPE html>\n<html>\n<head>\n<title>CES-35 Lovers</title>\n</head>\n<body>\n<h1>"+status+"</h1>\n</body>\n</html>";
     vector<unsigned char> contentConverted(content.begin(), content.end());
-    this->content = contentConverted;
+    this->content = contentConverted; // preencher content em formato adequado de unsigned char 
 }
 
 /* 
@@ -109,7 +119,7 @@ int HTTPResp::decode(unsigned char buf[], int bufSize){
     for(int i = startPos; i < startPos + chunkContentLen; ++i){
         this->content.push_back(buf[i]);
     }
-   
+
     return nBytesLeft;
 }
 
@@ -143,4 +153,3 @@ vector<unsigned char> HTTPResp::encode(){
 
     return resp;
 }
-

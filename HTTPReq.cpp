@@ -1,12 +1,21 @@
 #include "HTTPReq.h"
 
+/*
+		Construtor da classe sem argumentos para que seja populada a partir
+		da decodificação do lado do servidor.
+*/
 HTTPReq::HTTPReq(){}
 
+ /*
+ 		Construtor da classe com argumentos. E utilizado para construir
+		a mensagem com a requisicao que sera enviado ao servidor. Se
+		utiliza essa funcao na requisicao partindo do cliente.
+ */
 HTTPReq::HTTPReq(string url, string host){
-	this->method = "GET";
+	this->method = "GET"; // sao apenas relizadas requisicoes do tipo GET
 	this->URL = url;
-	this->version = "HTTP/1.0";
-	this->headers.push_back("Host: " + host);
+	this->version = "HTTP/1.0"; // reproduzir comportamento de HTTP/1.0
+	this->headers.push_back("Host: " + host); // acrescentar primeiro header
 }
 
 /* 
