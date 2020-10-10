@@ -35,6 +35,18 @@ void HTTPResp::decode(unsigned char resp[]){
     	lastPos = s.find('\r', startPos);
     }
 
+    int contentLen = 0;
+    for(string h : this->headers){
+        if(h.find("Content-Length:") != string::npos){
+            int pos = h.find(" ");
+            pos += 1;
+            stringstream ss;
+            ss << h.substr(pos, h.size() - pos);
+            ss >> contentLen;
+            break;
+        }
+    }
+
     //cout << "hearders: " << endl;
     for(string h : this->headers){
         if(h.find("Content-Length:") != string::npos){
@@ -48,8 +60,9 @@ void HTTPResp::decode(unsigned char resp[]){
         }
     }
 
-    if(resp[startPos-1] == '\n'){
-        cout << "eh barra n" << endl;
+
+    for(int i = startPos; i < startPos + contentLen; ++i){
+        this->content.push_back(resp[i]);
     }
     cout << "startPos: " << resp[startPos] << endl;
     this->startContent = startPos;
