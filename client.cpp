@@ -87,13 +87,6 @@ int main(int argc, char** argv) {
 		// cria um socket para IPv4 e usando protocolo de transporte TCP
 		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-		// struct sockaddr_in {
-		//  short            sin_family;   // e.g. AF_INET, AF_INET6
-		//  unsigned short   sin_port;     // e.g. htons(3490)
-		//  struct in_addr   sin_addr;     // see struct in_addr, below
-		//  char             sin_zero[8];  // zero this if you want to
-		// };
-
 		struct sockaddr_in serverAddr;
 		serverAddr.sin_family = AF_INET;
 		serverAddr.sin_port = htons(port);     // porta tem 16 bits, logo short, network byte order
@@ -125,7 +118,7 @@ int main(int argc, char** argv) {
 		/* 3) Assim que a conexão for estabelecida, o cliente precisa 
 		construir uma solicitação HTTP e enviar ao servidor Web e 
 		ficar bloqueado aguardando uma resposta. */
-		unsigned char bufIn[2097152] = {0};
+		unsigned char bufIn[32768] = {0};
 		unsigned char bufOut[1024] = {0};
 
 		// zera a memoria do buffer
@@ -154,7 +147,7 @@ int main(int argc, char** argv) {
 		// Se houver sucesso, ele deve salvar o arquivo correspondente no 
 		// diretório atual usando o mesmo nome interpretado pela URL. */
 		HTTPResp resp = HTTPResp();
-		resp.decode(bufIn);
+		int nBytesLeft = resp.decode(bufIn, sizeof(bufIn));
 
 		cout << endl << "Response " << resp.status << endl;
 
@@ -166,6 +159,24 @@ int main(int argc, char** argv) {
 				int pos = nameFile.find('/');
 				nameFile = nameFile.substr(0, pos);
 				reverse(nameFile.begin(), nameFile.end());
+			}
+
+
+			int nBytesReceived;
+			while(nBytesLeft > 0){
+				memset(bufIn, '\0', sizeof(bufIn));
+				
+				nBytesReceived = recv(sockfd, bufIn, sizeof(bufIn), 0);
+				if(nBytesReceived == -1){
+					perror("recv");
+					return 5;
+				}
+
+				for(int i = 0; i < nBytesReceived; ++i){
+					resp.content.push_back(bufIn[i]);
+				}
+
+				nBytesLeft -= nBytesReceived;
 			}
 
 			cout << endl << "Generating file..." << endl;

@@ -11,17 +11,15 @@ HTTPResp::HTTPResp(string status){
     this->content = contentConverted;
 }
 
-void HTTPResp::decode(unsigned char resp[]){
-    string s((char*) resp);
+int HTTPResp::decode(unsigned char buf[], int bufSize){
+    string s((char*) buf);
 	int startPos = 0, lastPos;
 	lastPos = s.find(' ');
 	this->version = s.substr(startPos, lastPos - startPos);
-    //cout << "version: " << this->version << endl;
 
 	startPos = lastPos + 1;
 	lastPos = s.find('\r', startPos);
     this->status = s.substr(startPos, lastPos - startPos);
-    //cout << "status: " << this->status << endl;
 
     startPos = lastPos + 2;
     lastPos = s.find('\r', startPos);
@@ -47,20 +45,20 @@ void HTTPResp::decode(unsigned char resp[]){
         }
     }
 
-    //cout << "hearders: " << endl;
-    // for(string s : this->headers){
-    //     cout << s << endl;  
-    // }
-
-    for(int i = startPos; i < startPos + contentLen; ++i){
-        this->content.push_back(resp[i]);
+    int nBytesLeft = 0;
+    int chunkContentLen = 0;
+    if(startPos + contentLen > bufSize){
+        chunkContentLen = bufSize - startPos;
+        nBytesLeft = contentLen - chunkContentLen;
+    } else {
+        chunkContentLen = contentLen;
     }
 
-    // cout << "content: " << endl;
-    // for(unsigned char c : this->content){
-    //     cout << c;
-    // }
-    
+    for(int i = startPos; i < startPos + chunkContentLen; ++i){
+        this->content.push_back(buf[i]);
+    }
+   
+    return nBytesLeft;
 }
 
 vector<unsigned char> HTTPResp::encode(){

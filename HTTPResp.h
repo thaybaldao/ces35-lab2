@@ -14,6 +14,6 @@ public:
 	vector<unsigned char> content;
 	HTTPResp();
 	HTTPResp(string status);
-	void decode(unsigned char resp[]);
+	int decode(unsigned char buf[], int bufSize);
 	vector<unsigned char> encode();
 };
