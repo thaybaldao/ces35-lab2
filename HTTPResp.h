@@ -12,6 +12,6 @@ public:
 	string content;
 	HTTPResp();
 	HTTPResp(string status);
-	//HTTPResp(string s);
+	void decode(string s);
 	string encode();
 };

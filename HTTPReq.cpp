@@ -2,6 +2,14 @@
 
 HTTPReq::HTTPReq(){}
 
+HTTPReq::HTTPReq(string url, string host){
+	this->method = "GET";
+	this->URL = url;
+	this->version = "HTTP/1.0";
+	this->headers.push_back("Host: " + host);
+}
+
+
 bool HTTPReq::decode(string s){
 	if(s.size() == 0 or s.back() != '\n'){
 		return false;

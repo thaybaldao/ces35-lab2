@@ -135,12 +135,13 @@ int main(int argc, char** argv) {
 		// usa um vetor de caracteres para preencher o endereço IP do cliente
 		char ipstr[INET_ADDRSTRLEN] = {'\0'};
 		inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+		cout << endl << "##############################################" << endl;
 		cout << "Accept a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
 		// faz leitura e escrita dos dados da conexao 
 		// utiliza um buffer de 20 bytes (char)
 		char bufIn[1024] = {0};
-		char bufOut[1024] = {0};
+		char bufOut[2097152] = {0};
 
 		string status200 = "200 OK";
 		string status400 = "400 Bad Request";
@@ -154,11 +155,8 @@ int main(int argc, char** argv) {
 		if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
 		  	perror("recv");
 		  	return 5;
-		  	// send 400 bad request
 		}
 
-		// Imprime o valor recebido no servidor antes de reenviar
-		// para o cliente de volta
 		string reqStr = bufIn;
 		HTTPReq req = HTTPReq();
 		HTTPResp resp;
@@ -178,15 +176,12 @@ int main(int argc, char** argv) {
 				resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 			} else {
 				resp = HTTPResp(status200);
-				string content;
-				string line;
-				
-				while(getline(myFile, line)) {
-			      content += line + "\n";
-			    }
+			
+				stringstream aux;
+			    aux << myFile.rdbuf(); //read the file
+			    resp.content = aux.str();
+
 			    myFile.close();
-			    
-			    resp.content = content;
 
 			    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 			}
@@ -195,6 +190,8 @@ int main(int argc, char** argv) {
 			resp.content = "<h1>" + status400 + "</h1>";
 			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 		}
+
+		cout << endl << "Returning response " << resp.status << endl;
 
 		strcpy(bufOut, resp.encode().c_str());
 		
@@ -206,7 +203,8 @@ int main(int argc, char** argv) {
 
 		// fecha o socket
 		close(clientSockfd);
-		cout << "Closing connection with: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+		cout << endl << "Closing connection with: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+		cout << "##############################################" << endl;
 	}
 
 	return 0;
