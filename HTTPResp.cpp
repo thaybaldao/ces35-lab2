@@ -36,11 +36,25 @@ void HTTPResp::decode(unsigned char resp[]){
     }
 
     //cout << "hearders: " << endl;
-    // for(string s : this->headers){
-    //     cout << s << endl;  
-    // }
+    for(string h : this->headers){
+        if(h.find("Content-Length:") != string::npos){
+            int pos = h.find(" ");
+            pos += 1;
+            stringstream ss;
+            ss << h.substr(pos, h.size() - pos);
+            ss >> this->contentLen;
+            cout << contentLen << endl;
+            break;
+        }
+    }
 
-    for(int i = startPos; i < s.size(); ++i){
+    if(resp[startPos-1] == '\n'){
+        cout << "eh barra n" << endl;
+    }
+    cout << "startPos: " << resp[startPos] << endl;
+    this->startContent = startPos;
+
+    for(int i = startPos; i < contentLen ; ++i){
         this->content.push_back(resp[i]);
     }
 

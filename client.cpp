@@ -169,8 +169,8 @@ int main(int argc, char** argv) {
 			}
 
 			cout << endl << "Generating file..." << endl;
-			ofstream outputFile(nameFile);
-			outputFile.write((char*)&resp.content[0], resp.content.size());
+			ofstream outputFile(nameFile, ios::out | ios::binary);
+			outputFile.write((const char*)&bufIn[resp.startContent], resp.contentLen);
 			outputFile.close();
 			cout << "File stored with name " << nameFile << endl;
 		}
