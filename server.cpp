@@ -59,7 +59,7 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 
 	// faz leitura e escrita dos dados da conexao
 	unsigned char bufIn[1024] = {0};
-	unsigned char bufOut[2097152] = {0};
+	unsigned char bufOut[32768] = {0};
 
 	string status200 = "200 OK";
 	string status400 = "400 Bad Request";
@@ -67,8 +67,7 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 
 	// zera a memoria do buffer
 	memset(bufIn, '\0', sizeof(bufIn));
-	memset(bufOut, '\0', sizeof(bufOut));
-
+	
 	// recebe ate 1024 bytes do cliente remoto
 	if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
 	  	perror("recv");
@@ -109,13 +108,33 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 	}
 
 	vector<unsigned char> bufOutVec = resp.encode();
-	copy(bufOutVec.begin(), bufOutVec.end(), bufOut);
+	int nBytes = bufOutVec.size();
+	int counter = bufOutVec.size();
+	int nBytesSent = 0;
+	int s = 0, e;
 
-	cout << endl << "Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+	while(counter > 0){
+		memset(bufOut, '\0', sizeof(bufOut));
 
-	if (send(clientSockfd, bufOut, sizeof(bufOut), 0) == -1) {
-		perror("send");
-	  	return;
+		if(counter > sizeof(bufOut)){
+			e = s + sizeof(bufOut);
+		} else {
+			e = s + counter;
+		}
+
+		copy(bufOutVec.begin() + s, bufOutVec.begin() + e, bufOut);
+
+		cout << endl << counter << ": Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+
+
+		nBytesSent = send(clientSockfd, bufOut, sizeof(bufOut), 0);
+		if(nBytesSent == -1){
+			perror("send");
+		  	return;
+		}
+
+		counter -= nBytesSent;
+		s = e;
 	}
 
 	// fecha o socket
