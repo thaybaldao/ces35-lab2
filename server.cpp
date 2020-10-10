@@ -140,8 +140,8 @@ int main(int argc, char** argv) {
 
 		// faz leitura e escrita dos dados da conexao 
 		// utiliza um buffer de 20 bytes (char)
-		char bufIn[1024] = {0};
-		char bufOut[2097152] = {0};
+		unsigned char bufIn[1024] = {0};
+		unsigned char bufOut[2097152] = {0};
 
 		string status200 = "200 OK";
 		string status400 = "400 Bad Request";
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
 		  	return 5;
 		}
 
-		string reqStr = bufIn;
+		string reqStr((char *)bufIn);
 		HTTPReq req = HTTPReq();
 		HTTPResp resp;
 
@@ -174,27 +174,46 @@ int main(int argc, char** argv) {
 				resp = HTTPResp(status404);
 				resp.content = "<h1>" + status404 + "</h1>";
 				resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+				strncpy((char *)bufOut, resp.encode().c_str(), sizeof(bufOut));
 			} else {
 				resp = HTTPResp(status200);
 			
 				stringstream aux;
 			    aux << myFile.rdbuf(); //read the file
-			    resp.content = aux.str();
-
+			    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};
+			
 			    myFile.close();
 
-			    resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+			    resp.headers.push_back("Content-Length: " + to_string(content.size()));
+
+			    strncpy((char *)bufOut, resp.encode().c_str(), sizeof(bufOut));
+
+			    int j = 0;
+			    while(bufOut[j] != '\0'){
+			    	++j;
+			    }
+
+			    for(int i = 0; i < content.size(); ++i){
+			    	bufOut[j++] = content[i];
+			    }
+			    bufOut[j] = '\0';
+
 			}
 		} else {
 			resp = HTTPResp(status400);
 			resp.content = "<h1>" + status400 + "</h1>";
 			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+			strncpy((char *)bufOut, resp.encode().c_str(), sizeof(bufOut));
 		}
 
 		cout << endl << "Returning response " << resp.status << endl;
 
-		strcpy(bufOut, resp.encode().c_str());
+		//strcpy(bufOut, resp.encode().c_str());
 		
+		//bufOut = (unsigned char)strtol(resp.encode().c_str(), NULL, 2);
+
+
+
 		// envia de volta o buffer recebido como um echo
 		if (send(clientSockfd, bufOut, sizeof(bufOut), 0) == -1) {
 			perror("send");
