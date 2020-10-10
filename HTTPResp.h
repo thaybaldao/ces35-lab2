@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <string.h>
 #include <vector>
 
 using namespace std;
@@ -9,9 +10,9 @@ public:
 	string version;
 	string status;
 	vector<string> headers;
-	string content;
+	vector<unsigned char> content;
 	HTTPResp();
 	HTTPResp(string status);
-	void decode(string s);
-	string encode();
+	//void decode(string s);
+	vector<unsigned char> encode();
 };

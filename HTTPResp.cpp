@@ -6,53 +6,62 @@ HTTPResp::HTTPResp(string status){
     this->version = "HTTP/1.0";
     this->status = status;
     this->headers = {};
-    this->content = "";
+    string content = "<!DOCTYPE html>\n<html>\n<head>\n<title>CES-35 Lovers</title>\n</head>\n<body>\n<h1>"+status+"</h1>\n</body>\n</html>";
+    vector<unsigned char> contentConverted(content.begin(), content.end());
+    this->content = contentConverted;
 }
 
-void HTTPResp::decode(string s){
-	int startPos = 0, lastPos;
-	lastPos = s.find(' ');
-	this->version = s.substr(startPos, lastPos - startPos);
-    //cout << "version: " << this->version << endl;
+// void HTTPResp::decode(string s){
+// 	int startPos = 0, lastPos;
+// 	lastPos = s.find(' ');
+// 	this->version = s.substr(startPos, lastPos - startPos);
+//     //cout << "version: " << this->version << endl;
 
-	startPos = lastPos + 1;
-	lastPos = s.find('\r', startPos);
-    this->status = s.substr(startPos, lastPos - startPos);
-    //cout << "status: " << this->status << endl;
+// 	startPos = lastPos + 1;
+// 	lastPos = s.find('\r', startPos);
+//     this->status = s.substr(startPos, lastPos - startPos);
+//     //cout << "status: " << this->status << endl;
 
-    startPos = lastPos + 2;
-    lastPos = s.find('\r', startPos);
-    while(true){
-        if(s[startPos] == '\r'){
-            startPos += 2;
-            break;
-        }
-    	this->headers.push_back(s.substr(startPos, lastPos - startPos));
-    	startPos = lastPos + 2;
-    	lastPos = s.find('\r', startPos);
-    }
+//     startPos = lastPos + 2;
+//     lastPos = s.find('\r', startPos);
+//     while(true){
+//         if(s[startPos] == '\r'){
+//             startPos += 2;
+//             break;
+//         }
+//     	this->headers.push_back(s.substr(startPos, lastPos - startPos));
+//     	startPos = lastPos + 2;
+//     	lastPos = s.find('\r', startPos);
+//     }
 
-    // cout << "hearders: " << endl;
-    // for(string s : this->headers){
-    //     cout << s << endl;  
-    // }
+//     // cout << "hearders: " << endl;
+//     // for(string s : this->headers){
+//     //     cout << s << endl;  
+//     // }
 
-    this->content = s.substr(startPos, s.size() - startPos);
-    //cout << "content: " << endl << this->content << endl;
+//     this->content = s.substr(startPos, s.size() - startPos);
+//     //cout << "content: " << endl << this->content << endl;
     
-}
+// }
 
-string HTTPResp::encode(){
-    string req;
+vector<unsigned char> HTTPResp::encode(){
+    string respStr;
 
-    req = this->version + " " + this->status + "\r\n";
+    respStr = this->version + " " + this->status + "\r\n";
     for(string h : this->headers){
-        req += h + "\r\n";
+        respStr += h + "\r\n";
     }
 
-    req += "\r\n" + this->content;
+    respStr += "\r\n";
 
-    //cout << req << endl << endl;
+    vector<unsigned char> resp(respStr.begin(), respStr.end());
 
-    return req;
+    for(int i = 0; i < this->content.size(); ++i){
+        resp.push_back(this->content[i]);
+    }
+
+    resp.push_back('\0');
+
+    return resp;
 }
+
