@@ -48,35 +48,17 @@ void HTTPResp::decode(unsigned char resp[]){
     }
 
     //cout << "hearders: " << endl;
-    for(string h : this->headers){
-        if(h.find("Content-Length:") != string::npos){
-            int pos = h.find(" ");
-            pos += 1;
-            stringstream ss;
-            ss << h.substr(pos, h.size() - pos);
-            ss >> this->contentLen;
-            cout << contentLen << endl;
-            break;
-        }
-    }
-
+    // for(string s : this->headers){
+    //     cout << s << endl;  
+    // }
 
     for(int i = startPos; i < startPos + contentLen; ++i){
         this->content.push_back(resp[i]);
     }
-    cout << "startPos: " << resp[startPos] << endl;
-    this->startContent = startPos;
 
-    stringstream aux;
-    for(int i = startPos; i < startPos + contentLen ; ++i){
-        aux << resp[i];
-    }
-    vector<unsigned char> cont{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}}; 
-    this->content = cont;
-    
     // cout << "content: " << endl;
-    // for(int i = startContent; i < startContent + contentLen; ++i){
-    //     cout << resp[i];
+    // for(unsigned char c : this->content){
+    //     cout << c;
     // }
     
 }
@@ -97,12 +79,7 @@ vector<unsigned char> HTTPResp::encode(){
         resp.push_back(this->content[i]);
     }
 
-    //resp.push_back('\0');
-
-    // cout << "content: " << endl;
-    // for(unsigned char c : this->content){
-    //     cout << c;
-    // }
+    resp.push_back('\0');
 
     return resp;
 }

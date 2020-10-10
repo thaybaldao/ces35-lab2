@@ -12,8 +12,6 @@ public:
 	string status;
 	vector<string> headers;
 	vector<unsigned char> content;
-	int startContent;
-	int contentLen;
 	HTTPResp();
 	HTTPResp(string status);
 	void decode(unsigned char resp[]);
