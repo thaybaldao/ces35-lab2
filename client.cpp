@@ -148,6 +148,10 @@ int main(int argc, char** argv) {
 		// diretório atual usando o mesmo nome interpretado pela URL. */
 		HTTPResp resp = HTTPResp();
 		int nBytesLeft = resp.decode(bufIn, sizeof(bufIn));
+		if(nBytesLeft == -1){
+			return 6;
+		}
+		
 		int nBytesReceived;
 
 		while(nBytesLeft > 0){
@@ -156,7 +160,7 @@ int main(int argc, char** argv) {
 			nBytesReceived = recv(sockfd, bufIn, sizeof(bufIn), 0);
 			if(nBytesReceived == -1){
 				perror("recv");
-				return 5;
+				return 7;
 			}
 
 			for(int i = 0; i < nBytesReceived; ++i){
