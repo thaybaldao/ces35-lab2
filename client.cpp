@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
 		/* 3) Assim que a conexão for estabelecida, o cliente precisa 
 		construir uma solicitação HTTP e enviar ao servidor Web e 
 		ficar bloqueado aguardando uma resposta. */
-		unsigned char bufIn[32768] = {0};
+		unsigned char bufIn[2048] = {0};
 		unsigned char bufOut[1024] = {0};
 
 		// zera a memoria do buffer
@@ -148,6 +148,23 @@ int main(int argc, char** argv) {
 		// diretório atual usando o mesmo nome interpretado pela URL. */
 		HTTPResp resp = HTTPResp();
 		int nBytesLeft = resp.decode(bufIn, sizeof(bufIn));
+		int nBytesReceived;
+
+		while(nBytesLeft > 0){
+			memset(bufIn, '\0', sizeof(bufIn));
+			
+			nBytesReceived = recv(sockfd, bufIn, sizeof(bufIn), 0);
+			if(nBytesReceived == -1){
+				perror("recv");
+				return 5;
+			}
+
+			for(int i = 0; i < nBytesReceived; ++i){
+				resp.content.push_back(bufIn[i]);
+			}
+
+			nBytesLeft -= nBytesReceived;
+		}
 
 		cout << endl << "Response " << resp.status << endl;
 
@@ -159,24 +176,6 @@ int main(int argc, char** argv) {
 				int pos = nameFile.find('/');
 				nameFile = nameFile.substr(0, pos);
 				reverse(nameFile.begin(), nameFile.end());
-			}
-
-
-			int nBytesReceived;
-			while(nBytesLeft > 0){
-				memset(bufIn, '\0', sizeof(bufIn));
-				
-				nBytesReceived = recv(sockfd, bufIn, sizeof(bufIn), 0);
-				if(nBytesReceived == -1){
-					perror("recv");
-					return 5;
-				}
-
-				for(int i = 0; i < nBytesReceived; ++i){
-					resp.content.push_back(bufIn[i]);
-				}
-
-				nBytesLeft -= nBytesReceived;
 			}
 
 			cout << endl << "Generating file..." << endl;

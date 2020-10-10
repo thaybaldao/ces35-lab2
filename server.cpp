@@ -59,7 +59,7 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 
 	// faz leitura e escrita dos dados da conexao
 	unsigned char bufIn[1024] = {0};
-	unsigned char bufOut[32768] = {0};
+	unsigned char bufOut[2048] = {0};
 
 	string status200 = "200 OK";
 	string status400 = "400 Bad Request";
@@ -108,7 +108,6 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 	}
 
 	vector<unsigned char> bufOutVec = resp.encode();
-	int nBytes = bufOutVec.size();
 	int counter = bufOutVec.size();
 	int nBytesSent = 0;
 	int s = 0, e;
