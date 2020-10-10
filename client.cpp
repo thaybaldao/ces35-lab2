@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <algorithm>
 
 #include "HTTPResp.h"
 #include "HTTPReq.h"
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
 		/* 3) Assim que a conexão for estabelecida, o cliente precisa 
 		construir uma solicitação HTTP e enviar ao servidor Web e 
 		ficar bloqueado aguardando uma resposta. */
-		char bufIn[1048576] = {0};
+		char bufIn[2097152] = {0};
 		char bufOut[1024] = {0};
 
 		// zera a memoria do buffer
@@ -161,7 +162,10 @@ int main(int argc, char** argv) {
 			if(nameFile == "/"){
 				nameFile = "index.html";
 			} else {
-				nameFile = nameFile.substr(1, nameFile.size() - 1);
+				reverse(nameFile.begin(), nameFile.end());
+				int pos = nameFile.find('/');
+				nameFile = nameFile.substr(0, pos);
+				reverse(nameFile.begin(), nameFile.end());
 			}
 
 			cout << endl << "Generating file..." << endl;
