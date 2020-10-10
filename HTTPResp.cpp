@@ -54,13 +54,16 @@ void HTTPResp::decode(unsigned char resp[]){
     cout << "startPos: " << resp[startPos] << endl;
     this->startContent = startPos;
 
-    for(int i = startPos; i < contentLen ; ++i){
-        this->content.push_back(resp[i]);
+    stringstream aux;
+    for(int i = startPos; i < startPos + contentLen ; ++i){
+        aux << resp[i];
     }
-
+    vector<unsigned char> cont{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}}; 
+    this->content = cont;
+    
     // cout << "content: " << endl;
-    // for(unsigned char c : this->content){
-    //     cout << c;
+    // for(int i = startContent; i < startContent + contentLen; ++i){
+    //     cout << resp[i];
     // }
     
 }
@@ -81,7 +84,12 @@ vector<unsigned char> HTTPResp::encode(){
         resp.push_back(this->content[i]);
     }
 
-    resp.push_back('\0');
+    //resp.push_back('\0');
+
+    // cout << "content: " << endl;
+    // for(unsigned char c : this->content){
+    //     cout << c;
+    // }
 
     return resp;
 }

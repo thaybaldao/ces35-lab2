@@ -177,7 +177,11 @@ int main(int argc, char** argv) {
 			
 				stringstream aux;
 			    aux << myFile.rdbuf(); //read the file
-			    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};		
+			    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};	
+			    for(unsigned char c : content){
+				    cout << c;
+				}
+    	
 			    myFile.close();
 
 			    resp.content = content;

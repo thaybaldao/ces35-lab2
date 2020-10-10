@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
 		  return 4;
 		}
 
-		// // recebe no buffer uma certa quantidade de bytes ate 20 
+		// // recebe no buffer uma certa quantidade de bytes
 		if (recv(sockfd,  bufIn, sizeof(bufIn), 0) == -1) {
 			perror("recv");
 			return 5;
@@ -169,9 +169,14 @@ int main(int argc, char** argv) {
 			}
 
 			cout << endl << "Generating file..." << endl;
-			ofstream outputFile(nameFile, ios::out | ios::binary);
-			outputFile.write((const char*)&bufIn[resp.startContent], resp.contentLen);
-			outputFile.close();
+			// ofstream outputFile(nameFile, ios::out | ios::binary);
+			// outputFile.write((const char*)&resp.content[0], resp.content.size());
+			// outputFile.close();
+			FILE * pFile;
+			pFile = fopen (nameFile.c_str(), "wb");
+			fwrite (&bufIn[resp.startContent] , sizeof(unsigned char), resp.contentLen, pFile);
+			fclose (pFile);
+
 			cout << "File stored with name " << nameFile << endl;
 		}
 
