@@ -11,38 +11,45 @@ HTTPResp::HTTPResp(string status){
     this->content = contentConverted;
 }
 
-// void HTTPResp::decode(string s){
-// 	int startPos = 0, lastPos;
-// 	lastPos = s.find(' ');
-// 	this->version = s.substr(startPos, lastPos - startPos);
-//     //cout << "version: " << this->version << endl;
+void HTTPResp::decode(unsigned char resp[]){
+    string s((char*) resp);
+	int startPos = 0, lastPos;
+	lastPos = s.find(' ');
+	this->version = s.substr(startPos, lastPos - startPos);
+    //cout << "version: " << this->version << endl;
 
-// 	startPos = lastPos + 1;
-// 	lastPos = s.find('\r', startPos);
-//     this->status = s.substr(startPos, lastPos - startPos);
-//     //cout << "status: " << this->status << endl;
+	startPos = lastPos + 1;
+	lastPos = s.find('\r', startPos);
+    this->status = s.substr(startPos, lastPos - startPos);
+    //cout << "status: " << this->status << endl;
 
-//     startPos = lastPos + 2;
-//     lastPos = s.find('\r', startPos);
-//     while(true){
-//         if(s[startPos] == '\r'){
-//             startPos += 2;
-//             break;
-//         }
-//     	this->headers.push_back(s.substr(startPos, lastPos - startPos));
-//     	startPos = lastPos + 2;
-//     	lastPos = s.find('\r', startPos);
-//     }
+    startPos = lastPos + 2;
+    lastPos = s.find('\r', startPos);
+    while(true){
+        if(s[startPos] == '\r'){
+            startPos += 2;
+            break;
+        }
+    	this->headers.push_back(s.substr(startPos, lastPos - startPos));
+    	startPos = lastPos + 2;
+    	lastPos = s.find('\r', startPos);
+    }
 
-//     // cout << "hearders: " << endl;
-//     // for(string s : this->headers){
-//     //     cout << s << endl;  
-//     // }
+    //cout << "hearders: " << endl;
+    // for(string s : this->headers){
+    //     cout << s << endl;  
+    // }
 
-//     this->content = s.substr(startPos, s.size() - startPos);
-//     //cout << "content: " << endl << this->content << endl;
+    for(int i = startPos; i < s.size(); ++i){
+        this->content.push_back(resp[i]);
+    }
+
+    // cout << "content: " << endl;
+    // for(unsigned char c : this->content){
+    //     cout << c;
+    // }
     
-// }
+}
 
 vector<unsigned char> HTTPResp::encode(){
     string respStr;

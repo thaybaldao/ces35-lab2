@@ -125,8 +125,8 @@ int main(int argc, char** argv) {
 		/* 3) Assim que a conexão for estabelecida, o cliente precisa 
 		construir uma solicitação HTTP e enviar ao servidor Web e 
 		ficar bloqueado aguardando uma resposta. */
-		char bufIn[2097152] = {0};
-		char bufOut[1024] = {0};
+		unsigned char bufIn[2097152] = {0};
+		unsigned char bufOut[1024] = {0};
 
 		// zera a memoria do buffer
 		memset(bufIn, '\0', sizeof(bufIn));
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 
 		HTTPReq req = HTTPReq(nameFile, host);
 
-		strcpy(bufOut, req.encode().c_str());
+		strcpy((char*)bufOut, req.encode().c_str());
 
 		// converte a string lida em vetor de bytes 
 		// com o tamanho do vetor de caracteres
@@ -149,10 +149,10 @@ int main(int argc, char** argv) {
 			return 5;
 		}
 
-		/* 4) Após receber a resposta, o cliente precisa analisar se 
-		houve sucesso ou falha, por meio de análise do código de resposta. 
-		Se houver sucesso, ele deve salvar o arquivo correspondente no 
-		diretório atual usando o mesmo nome interpretado pela URL. */
+		// /* 4) Após receber a resposta, o cliente precisa analisar se 
+		// houve sucesso ou falha, por meio de análise do código de resposta. 
+		// Se houver sucesso, ele deve salvar o arquivo correspondente no 
+		// diretório atual usando o mesmo nome interpretado pela URL. */
 		HTTPResp resp = HTTPResp();
 		resp.decode(bufIn);
 
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
 
 			cout << endl << "Generating file..." << endl;
 			ofstream outputFile(nameFile);
-			outputFile << resp.content;
+			outputFile.write((char*)&resp.content[0], resp.content.size());
 			outputFile.close();
 			cout << "File stored with name " << nameFile << endl;
 		}

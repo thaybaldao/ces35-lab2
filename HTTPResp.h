@@ -13,6 +13,6 @@ public:
 	vector<unsigned char> content;
 	HTTPResp();
 	HTTPResp(string status);
-	//void decode(string s);
+	void decode(unsigned char resp[]);
 	vector<unsigned char> encode();
 };
