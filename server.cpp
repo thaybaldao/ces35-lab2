@@ -12,9 +12,13 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include "HTTPResp.h"
 #include "HTTPReq.h"
+
+#define BACKLOG 10
 
 using namespace std;
 
@@ -45,6 +49,78 @@ string getIP(string host){
 
 	freeaddrinfo(res); // libera a memoria alocada dinamicamente para "res"
 	return ipstr;
+}
+
+void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
+	// usa um vetor de caracteres para preencher o endereço IP do cliente
+	char ipstr[INET_ADDRSTRLEN] = {'\0'};
+	inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+	cout << endl << "Accepting connection from " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+
+	// faz leitura e escrita dos dados da conexao
+	unsigned char bufIn[1024] = {0};
+	unsigned char bufOut[2097152] = {0};
+
+	string status200 = "200 OK";
+	string status400 = "400 Bad Request";
+	string status404 = "404 Not Found";
+
+	// zera a memoria do buffer
+	memset(bufIn, '\0', sizeof(bufIn));
+	memset(bufOut, '\0', sizeof(bufOut));
+
+	// recebe ate 1024 bytes do cliente remoto
+	if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
+	  	perror("recv");
+	  	return;
+	}
+
+	string reqStr((char *)bufIn);
+	HTTPReq req = HTTPReq();
+	HTTPResp resp;
+
+	if(req.decode(reqStr)){
+		string nameFile = dir;
+		if(req.URL == "/"){
+			nameFile += "/index.html";
+		} else{
+			nameFile += req.URL;
+		}
+
+		ifstream myFile(nameFile);
+		if(!myFile.is_open()){
+			resp = HTTPResp(status404);
+			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+		} else {
+			resp = HTTPResp(status200);
+		
+			stringstream aux;
+		    aux << myFile.rdbuf(); //read the file
+		    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};		
+		    myFile.close();
+
+		    resp.content = content;
+
+		    resp.headers.push_back("Content-Length: " + to_string(content.size()));
+		}
+	} else {
+		resp = HTTPResp(status400);
+		resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
+	}
+
+	vector<unsigned char> bufOutVec = resp.encode();
+	copy(bufOutVec.begin(), bufOutVec.end(), bufOut);
+
+	cout << endl << "Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+
+	if (send(clientSockfd, bufOut, sizeof(bufOut), 0) == -1) {
+		perror("send");
+	  	return;
+	}
+
+	// fecha o socket
+	close(clientSockfd);
+	cout << endl << "Closing connection with " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 }
 
 
@@ -109,7 +185,8 @@ int main(int argc, char** argv) {
 	/* b) por meio do socket "listen" aceitar solicitações de conexão dos clientes, 
 	e estabelecer conexões com os clientes. */
 	// colocar o socket em modo de escuta, ouvindo a porta 
-	if (listen(sockfd, 1) == -1) {
+
+	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
 		return 3;
 	}
@@ -117,7 +194,7 @@ int main(int argc, char** argv) {
 	// aceitar a conexao TCP
 	// verificar que sockfd e clientSockfd sao sockets diferentes
 	// sockfd eh a "socket de boas vindas"
-	// clientSockfd eh a "socket diretamente com o cliente"
+	// clientSockfd eh a "socket diretamente com o cliente" 
 	while(true){
 		struct sockaddr_in clientAddr;
 		socklen_t clientAddrSize = sizeof(clientAddr);
@@ -131,79 +208,7 @@ int main(int argc, char** argv) {
 		/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
 		exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
 		deve poder receber solicitações de vários clientes ao mesmo tempo */
-
-		// usa um vetor de caracteres para preencher o endereço IP do cliente
-		char ipstr[INET_ADDRSTRLEN] = {'\0'};
-		inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
-		cout << endl << "##############################################" << endl;
-		cout << "Accept a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
-
-		// faz leitura e escrita dos dados da conexao
-		unsigned char bufIn[1024] = {0};
-		unsigned char bufOut[2097152] = {0};
-
-		string status200 = "200 OK";
-		string status400 = "400 Bad Request";
-		string status404 = "404 Not Found";
-
-		// zera a memoria do buffer
-		memset(bufIn, '\0', sizeof(bufIn));
-		memset(bufOut, '\0', sizeof(bufOut));
-
-		// recebe ate 1024 bytes do cliente remoto
-		if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
-		  	perror("recv");
-		  	return 5;
-		}
-
-		string reqStr((char *)bufIn);
-		HTTPReq req = HTTPReq();
-		HTTPResp resp;
-
-		if(req.decode(reqStr)){
-			string nameFile = dir;
-			if(req.URL == "/"){
-				nameFile += "/index.html";
-			} else{
-				nameFile += req.URL;
-			}
-
-			ifstream myFile(nameFile);
-			if(!myFile.is_open()){
-				resp = HTTPResp(status404);
-				resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
-			} else {
-				resp = HTTPResp(status200);
-			
-				stringstream aux;
-			    aux << myFile.rdbuf(); //read the file
-			    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};		
-			    myFile.close();
-
-			    resp.content = content;
-
-			    resp.headers.push_back("Content-Length: " + to_string(content.size()));
-			}
-		} else {
-			resp = HTTPResp(status400);
-			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
-		}
-
-		vector<unsigned char> bufOutVec = resp.encode();
-		copy(bufOutVec.begin(), bufOutVec.end(), bufOut);
-
-		cout << endl << "Returning response " << resp.status << endl;
-
-		// envia de volta o buffer recebido como um echo
-		if (send(clientSockfd, bufOut, sizeof(bufOut), 0) == -1) {
-			perror("send");
-		  	return 6;
-		}
-
-		// fecha o socket
-		close(clientSockfd);
-		cout << endl << "Closing connection with: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
-		cout << "##############################################" << endl;
+		thread(serveRequest, clientAddr, clientSockfd, dir).detach();
 	}
 
 	return 0;
