@@ -22,17 +22,19 @@
 
 using namespace std;
 
+/*
+		Funcao para converter o hostname em um indereco de IP (IPv4)
+*/
 string getIP(string host){
 	struct addrinfo hints;
 	struct addrinfo* res;
 
-	// hints - modo de configurar o socket para o tipo  de transporte
+	// configuracao do socket
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; // IPv4
 	hints.ai_socktype = SOCK_STREAM; // TCP
 
-	// funcao de obtencao do endereco via DNS - getaddrinfo 
-	// funcao preenche o buffer "res" e obtem o codigo de resposta "status" 
+	// funcao de obtencao do endereco via DNS - getaddrinfo
 	int status = 0;
 	if ((status = getaddrinfo(host.c_str(), "80", &hints, &res)) != 0) {
 		cerr << "getaddrinfo: " << gai_strerror(status) << endl;
@@ -40,14 +42,13 @@ string getIP(string host){
 	}
 
 	struct addrinfo* p = res;
-	// a estrutura de dados eh generica e portanto precisa de type cast
 	struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
 
-	// e depois eh preciso realizar a conversao do endereco IP para string
+	// conversao do endereco IP para string
 	char ipstr[INET_ADDRSTRLEN] = {'\0'};
 	inet_ntop(p->ai_family, &(ipv4->sin_addr), ipstr, sizeof(ipstr));
 
-	freeaddrinfo(res); // libera a memoria alocada dinamicamente para "res"
+	freeaddrinfo(res); // libera memoria alocada
 	return ipstr;
 }
 
@@ -67,7 +68,7 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 
 	// zera a memoria do buffer
 	memset(bufIn, '\0', sizeof(bufIn));
-	
+
 	// recebe ate 1024 bytes do cliente remoto
 	if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
 	  	perror("recv");
@@ -92,10 +93,10 @@ void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
 			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 		} else {
 			resp = HTTPResp(status200);
-		
+
 			stringstream aux;
 		    aux << myFile.rdbuf(); //read the file
-		    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};		
+		    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};
 		    myFile.close();
 
 		    resp.content = content;
@@ -164,15 +165,15 @@ int main(int argc, char** argv) {
 
 	string ip = getIP(host);
 
-	/* a) converter o nome do host do servidor em endereço IP, 
-	 abrir socket para escuta neste endereço IP e no número 
+	/* a) converter o nome do host do servidor em endereço IP,
+	 abrir socket para escuta neste endereço IP e no número
 	 de porta especificado. */
-	
+
 	// cria um socket para IPv4 e usando protocolo de transporte TCP
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 	// Opções de configuração do SOCKETs
-	// No sistema Unix um socket local TCP fica preso e indisponível 
+	// No sistema Unix um socket local TCP fica preso e indisponível
 	// por algum tempo após close, a não ser que configurado SO_REUSEADDR
 	int yes = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
@@ -199,9 +200,9 @@ int main(int argc, char** argv) {
 		return 2;
 	}
 
-	/* b) por meio do socket "listen" aceitar solicitações de conexão dos clientes, 
+	/* b) por meio do socket "listen" aceitar solicitações de conexão dos clientes,
 	e estabelecer conexões com os clientes. */
-	// colocar o socket em modo de escuta, ouvindo a porta 
+	// colocar o socket em modo de escuta, ouvindo a porta
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
@@ -211,7 +212,7 @@ int main(int argc, char** argv) {
 	// aceitar a conexao TCP
 	// verificar que sockfd e clientSockfd sao sockets diferentes
 	// sockfd eh a "socket de boas vindas"
-	// clientSockfd eh a "socket diretamente com o cliente" 
+	// clientSockfd eh a "socket diretamente com o cliente"
 	while(true){
 		struct sockaddr_in clientAddr;
 		socklen_t clientAddrSize = sizeof(clientAddr);
@@ -222,8 +223,8 @@ int main(int argc, char** argv) {
 			return 4;
 		}
 
-		/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
-		exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
+		/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por
+		exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web
 		deve poder receber solicitações de vários clientes ao mesmo tempo */
 		thread(serveRequest, clientAddr, clientSockfd, dir).detach();
 	}

@@ -18,29 +18,36 @@
 
 using namespace std;
 
+/*
+		Funcao para segmentar a string de entrada do client e separar
+		os trechos de hostname, porta e arquivo alvo.
+		Padrao de reconhecimento: http://hostname:port/file
+*/
 void handleURL(string& url, string& host, string& portStr, string& nameFile){
-	int startPos = 7;
+	int startPos = 7; // descontar "http://"
 	int lastPos = url.find(':', startPos);
-	host = url.substr(startPos, lastPos - startPos);
+	host = url.substr(startPos, lastPos - startPos); // isolar nome do host
 
 	startPos = lastPos + 1;
 	lastPos = url.find('/', startPos);
-	portStr = url.substr(startPos, lastPos - startPos);
+	portStr = url.substr(startPos, lastPos - startPos); // isolar o numero da porta
 
-	nameFile = url.substr(lastPos, url.size() - lastPos);
+	nameFile = url.substr(lastPos, url.size() - lastPos); // isolar nome do arquivo no final
 }
 
+/*
+		Funcao para converter o hostname em um indereco de IP (IPv4)
+*/
 string getIP(string host){
 	struct addrinfo hints;
 	struct addrinfo* res;
 
-	// hints - modo de configurar o socket para o tipo  de transporte
+	// configuracao do socket
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; // IPv4
 	hints.ai_socktype = SOCK_STREAM; // TCP
 
-	// funcao de obtencao do endereco via DNS - getaddrinfo 
-	// funcao preenche o buffer "res" e obtem o codigo de resposta "status" 
+	// funcao de obtencao do endereco via DNS - getaddrinfo
 	int status = 0;
 	if ((status = getaddrinfo(host.c_str(), "80", &hints, &res)) != 0) {
 		cerr << "getaddrinfo: " << gai_strerror(status) << endl;
@@ -48,14 +55,13 @@ string getIP(string host){
 	}
 
 	struct addrinfo* p = res;
-	// a estrutura de dados eh generica e portanto precisa de type cast
 	struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
 
-	// e depois eh preciso realizar a conversao do endereco IP para string
+	// conversao do endereco IP para string
 	char ipstr[INET_ADDRSTRLEN] = {'\0'};
 	inet_ntop(p->ai_family, &(ipv4->sin_addr), ipstr, sizeof(ipstr));
 
-	freeaddrinfo(res); // libera a memoria alocada dinamicamente para "res"
+	freeaddrinfo(res); // libera memoria alocada
 	return ipstr;
 }
 
@@ -69,7 +75,7 @@ int main(int argc, char** argv) {
 	for(int i = 1; i < argc; ++i){
 		urls.push_back(argv[i]);
 
-		/* 1) segmentar a string da URL e interpretar os parametros 
+		/* 1) segmentar a string da URL e interpretar os parametros
 		da mesma como hostname, porta e o objeto a ser solicitado.*/
 		string host;
 		string portStr;
@@ -83,7 +89,7 @@ int main(int argc, char** argv) {
 		ss >> port;
 
 		string ip = getIP(host);
-		
+
 		// cria um socket para IPv4 e usando protocolo de transporte TCP
 		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -99,7 +105,7 @@ int main(int argc, char** argv) {
 			return 2;
 		}
 
-		// a partir do SO, eh possivel obter o endereço IP usando 
+		// a partir do SO, eh possivel obter o endereço IP usando
 		// pelo cliente (nos mesmos) usando a funcao getsockname
 		struct sockaddr_in clientAddr;
 		socklen_t clientAddrLen = sizeof(clientAddr);
@@ -115,8 +121,8 @@ int main(int argc, char** argv) {
 		cout << endl << "##############################################" << endl;
 		cout << "Set up a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
-		/* 3) Assim que a conexão for estabelecida, o cliente precisa 
-		construir uma solicitação HTTP e enviar ao servidor Web e 
+		/* 3) Assim que a conexão for estabelecida, o cliente precisa
+		construir uma solicitação HTTP e enviar ao servidor Web e
 		ficar bloqueado aguardando uma resposta. */
 		unsigned char bufIn[2048] = {0};
 		unsigned char bufOut[1024] = {0};
@@ -129,22 +135,22 @@ int main(int argc, char** argv) {
 
 		strcpy((char*)bufOut, req.encode().c_str());
 
-		// converte a string lida em vetor de bytes 
+		// converte a string lida em vetor de bytes
 		// com o tamanho do vetor de caracteres
 		if (send(sockfd, bufOut, sizeof(bufOut), 0) == -1) {
 		  perror("send");
 		  return 4;
 		}
 
-		// // recebe no buffer uma certa quantidade de bytes ate 20 
+		// // recebe no buffer uma certa quantidade de bytes ate 20
 		if (recv(sockfd,  bufIn, sizeof(bufIn), 0) == -1) {
 			perror("recv");
 			return 5;
 		}
 
-		// /* 4) Após receber a resposta, o cliente precisa analisar se 
-		// houve sucesso ou falha, por meio de análise do código de resposta. 
-		// Se houver sucesso, ele deve salvar o arquivo correspondente no 
+		// /* 4) Após receber a resposta, o cliente precisa analisar se
+		// houve sucesso ou falha, por meio de análise do código de resposta.
+		// Se houver sucesso, ele deve salvar o arquivo correspondente no
 		// diretório atual usando o mesmo nome interpretado pela URL. */
 		HTTPResp resp = HTTPResp();
 		int nBytesLeft = resp.decode(bufIn, sizeof(bufIn));
@@ -152,7 +158,7 @@ int main(int argc, char** argv) {
 
 		while(nBytesLeft > 0){
 			memset(bufIn, '\0', sizeof(bufIn));
-			
+
 			nBytesReceived = recv(sockfd, bufIn, sizeof(bufIn), 0);
 			if(nBytesReceived == -1){
 				perror("recv");
