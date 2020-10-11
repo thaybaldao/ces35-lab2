@@ -18,7 +18,7 @@
 #include "HTTPResp.h"
 #include "HTTPReq.h"
 
-#define BACKLOG 10
+#define BACKLOG 10 // Numero de requisicoes pendentes para a funcao "listen"
 
 using namespace std;
 
@@ -51,101 +51,133 @@ string getIP(string host){
 	return ipstr;
 }
 
+/*
+	Funcao que serah aplicada em threads e interpreta a requisicao que chega do 
+	endereco clientAddr e foi enviada pelo socket clientSockfd. A string dir guarda 
+	o diretorio de origem dos arquivos lidos e retornados na resposta HTTP caso
+	o status seja 200. Essa funcao tambem constroi, envia a resposta HTTP e fecha 
+	o socket clientSockfd. 
+*/ 
 void serveRequest(struct sockaddr_in clientAddr, int clientSockfd, string dir){
-	// usa um vetor de caracteres para preencher o endereço IP do cliente
+	// Preencher o endereço IP do cliente com um vetor de caracteres
 	char ipstr[INET_ADDRSTRLEN] = {'\0'};
 	inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
 	cout << endl << "Accepting connection from " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
-	// faz leitura e escrita dos dados da conexao
-	unsigned char bufIn[1024] = {0};
-	unsigned char bufOut[2048] = {0};
+	unsigned char bufIn[1024] = {0}; // Buffer de entrada com 1024 bytes
+	unsigned char bufOut[2048] = {0}; // Buffer de saida com 2048 bytes
 
+	// Strings de status das respostas HTTPs possiveis
 	string status200 = "200 OK";
 	string status400 = "400 Bad Request";
 	string status404 = "404 Not Found";
 
-	// zera a memoria do buffer
+	// Zerar a memoria do buffer de entrada
 	memset(bufIn, '\0', sizeof(bufIn));
 	
-	// recebe ate 1024 bytes do cliente remoto
+	// Receber ateh 1024 bytes do cliente, numero este suficiente para armazenar uma requisicao GET
 	if (recv(clientSockfd, bufIn, sizeof(bufIn), 0) == -1) {
 	  	perror("recv");
 	  	return;
 	}
 
-	string reqStr((char *)bufIn);
+	string reqStr((char *)bufIn); // String para guardar a requisicao HTTP
+	
+	// Estruturas de requisicao e resposta HTTP
 	HTTPReq req = HTTPReq();
 	HTTPResp resp;
 
-	if(req.decode(reqStr)){
+	if(req.decode(reqStr)){ // Caso nao haja problemas com a leitura da requisicao recebida
 		string nameFile = dir;
-		if(req.URL == "/"){
+		if(req.URL == "/"){ // Se a requisicao chamar a URL "/", envia-se o arquivo index.html
 			nameFile += "/index.html";
 		} else{
 			nameFile += req.URL;
 		}
 
+		// Abrir arquivo requisitado
 		ifstream myFile(nameFile);
-		if(!myFile.is_open()){
+		if(!myFile.is_open()){ // Se nao encontrar o arquivo, retornar erro 404 - Not Found
 			resp = HTTPResp(status404);
+			// Preencher header da resposta HTTP com tamanho do conteudo do arquivo HTML retornado 
 			resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
-		} else {
+		} else { // Caso o arquivo exista, retornar resposta 200 - OK
 			resp = HTTPResp(status200);
-		
+			
+			/*
+				Ler arquivo correspondente e salva-lo em um vetor de unsigned char,
+				que serah o conteudo do arquivo da resposta HTTP
+			*/
 			stringstream aux;
-		    aux << myFile.rdbuf(); //read the file
+		    aux << myFile.rdbuf();
 		    vector<unsigned char> content{istreambuf_iterator<char>{aux}, istreambuf_iterator<char>{}};		
 		    myFile.close();
+			resp.content = content;
 
-		    resp.content = content;
-
+			// Preencher header da resposta HTTP com tamanho do conteudo do arquivo HTML retornado
 		    resp.headers.push_back("Content-Length: " + to_string(content.size()));
 		}
-	} else {
+	} else { // Se ha problemas com a leitura da requisicao recebida, retornar erro 400 - Bad Request
 		resp = HTTPResp(status400);
+		// Preencher header da resposta HTTP com tamanho do conteudo do arquivo HTML retornado 
 		resp.headers.push_back("Content-Length: " + to_string(resp.content.size()));
 	}
 
+	// Vetor de unsigned char que contem todo o conteudo da resposta HTTP
 	vector<unsigned char> bufOutVec = resp.encode();
-	int counter = bufOutVec.size();
-	int nBytesSent = 0;
-	int s = 0, e;
+	int counter = bufOutVec.size(); // Numero de bytes que serao transmitidos no total
+	int nBytesSent = 0; // Numero de bytes enviados para o cliente
+	/*
+		Iteradores auxiliares para percorrer o vetor bufOutVec 
+		a ser enviado em multiplas chamadas da funcao send()
+	*/
+	int s = 0, e; 
 
+	/*
+		Enviar dados enquanto ainda ha conteudo 
+		da resposta HTTP que ainda nao foi enviado
+	*/
 	while(counter > 0){
+		// Zerar memoria do buffer de saida
 		memset(bufOut, '\0', sizeof(bufOut));
 
-		if(counter > sizeof(bufOut)){
+		if(counter > sizeof(bufOut)){ // Se o numero de bytes que faltam ser enviados eh maior do que a capacidade do buffer de saida, serah enviada essa quantidade de dados
 			e = s + sizeof(bufOut);
-		} else {
+		} else { // Caso contrario, sera enviado apenas o numero de bytes necessario para terminar o envio da resposta HTTP
 			e = s + counter;
 		}
 
+		// Colocar parte do vetor bufOutVec no buffer de saida
 		copy(bufOutVec.begin() + s, bufOutVec.begin() + e, bufOut);
 
+		/*
+			Enviar buffer, atualizar o numero de bytes que faltam ser enviados e
+			o indice de inicio de leitura do vetor bufOutVec
+		*/
 		nBytesSent = send(clientSockfd, bufOut, sizeof(bufOut), 0);
 		if(nBytesSent == -1){
 			perror("send");
 		  	return;
 		}
-
 		counter -= nBytesSent;
 		s = e;
 	}
 
 	cout << endl << "Returning response " << resp.status << " to " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 
-	// fecha o socket
+	// Fechar o socket do cliente
 	close(clientSockfd);
 	cout << endl << "Closing connection with " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
 }
 
 
 int main(int argc, char** argv) {
+	// Valores padroes de host, porta e diretorio de leitura de arquivos
 	string host = "localhost";
 	string portStr = "3000";
 	string dir = "/tmp";
 
+	// Atualizar valores de host, porta e diretorio de leitura de arquivos para os valores digitados pelo usuario
 	if(argc == 4){
 		host = argv[1];
 		portStr = argv[2];
@@ -157,62 +189,58 @@ int main(int argc, char** argv) {
 		host = argv[1];
 	}
 
+	// Converter a porta em numero inteiro
 	stringstream ss;
 	ss << portStr;
 	int port;
 	ss >> port;
 
-	string ip = getIP(host);
+	/*
+		Converter o nome do host do servidor em endereço IP, 
+		abrir socket para escuta neste endereço IP e no número 
+		de porta especificado.
+	*/
 
-	/* a) converter o nome do host do servidor em endereço IP, 
-	 abrir socket para escuta neste endereço IP e no número 
-	 de porta especificado. */
+	string ip = getIP(host);
 	
-	// cria um socket para IPv4 e usando protocolo de transporte TCP
+	// Criar um socket para IPv4 e usando protocolo de transporte TCP
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-	// Opções de configuração do SOCKETs
-	// No sistema Unix um socket local TCP fica preso e indisponível 
-	// por algum tempo após close, a não ser que configurado SO_REUSEADDR
+	/*
+		Configurar socket para ele nao ficar preso e indisponível 
+		por algum tempo apos seu fechamento.
+	*/
 	int yes = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 		perror("setsockopt");
 		return 1;
 	}
 
-	// struct sockaddr_in {
-	//  short            sin_family;   // e.g. AF_INET, AF_INET6
-	//  unsigned short   sin_port;     // e.g. htons(3490)
-	//  struct in_addr   sin_addr;     // see struct in_addr, below
-	//  char             sin_zero[8];  // zero this if you want to
-	// };
-
+	// Preencher struct sockaddr_in com os dados do socket do servidor
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);     // porta tem 16 bits, logo short, network byte order
+	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = inet_addr(ip.c_str());
 	memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
 
-	// realizar o bind (registrar a porta para uso com o SO) para o socket
+	// Registrar a porta para uso do socket
 	if (bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
 		perror("bind");
 		return 2;
 	}
 
-	/* b) por meio do socket "listen" aceitar solicitações de conexão dos clientes, 
-	e estabelecer conexões com os clientes. */
-	// colocar o socket em modo de escuta, ouvindo a porta 
+	/*
+		Por meio do socket "listen", aceitar solicitações de
+		conexão dos clientes e estabelecer conexões com eles.
+	*/
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
 		return 3;
 	}
 
-	// aceitar a conexao TCP
-	// verificar que sockfd e clientSockfd sao sockets diferentes
-	// sockfd eh a "socket de boas vindas"
-	// clientSockfd eh a "socket diretamente com o cliente" 
 	while(true){
+		// Aceitar a conexao TCP com o cliente
 		struct sockaddr_in clientAddr;
 		socklen_t clientAddrSize = sizeof(clientAddr);
 		int clientSockfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);
@@ -222,9 +250,11 @@ int main(int argc, char** argv) {
 			return 4;
 		}
 
-		/* c) Fazer uso de programação de redes que lide com conexões simultâneas (por 
-		exemplo, por meio de multiprocess e multithreads). Ou seja, o servidor web 
-		deve poder receber solicitações de vários clientes ao mesmo tempo */
+		/*
+			Fazer uso de programação de redes que lide com conexões simultâneas por 
+			multithreads. Ou seja, o servidor web pode receber solicitações 
+			de vários clientes ao mesmo tempo.
+		*/
 		thread(serveRequest, clientAddr, clientSockfd, dir).detach();
 	}
 
