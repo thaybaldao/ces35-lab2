@@ -22,17 +22,19 @@
 
 using namespace std;
 
+/*
+		Funcao para converter o hostname em um indereco de IP (IPv4)
+*/
 string getIP(string host){
 	struct addrinfo hints;
 	struct addrinfo* res;
 
-	// hints - modo de configurar o socket para o tipo  de transporte
+	// configuracao do socket
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; // IPv4
 	hints.ai_socktype = SOCK_STREAM; // TCP
 
-	// funcao de obtencao do endereco via DNS - getaddrinfo 
-	// funcao preenche o buffer "res" e obtem o codigo de resposta "status" 
+	// funcao de obtencao do endereco via DNS - getaddrinfo
 	int status = 0;
 	if ((status = getaddrinfo(host.c_str(), "80", &hints, &res)) != 0) {
 		cerr << "getaddrinfo: " << gai_strerror(status) << endl;
@@ -40,14 +42,13 @@ string getIP(string host){
 	}
 
 	struct addrinfo* p = res;
-	// a estrutura de dados eh generica e portanto precisa de type cast
 	struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
 
-	// e depois eh preciso realizar a conversao do endereco IP para string
+	// conversao do endereco IP para string
 	char ipstr[INET_ADDRSTRLEN] = {'\0'};
 	inet_ntop(p->ai_family, &(ipv4->sin_addr), ipstr, sizeof(ipstr));
 
-	freeaddrinfo(res); // libera a memoria alocada dinamicamente para "res"
+	freeaddrinfo(res); // libera memoria alocada
 	return ipstr;
 }
 
